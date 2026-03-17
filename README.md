@@ -4,8 +4,6 @@ Genera una portada visual en formato PNG con la información básica de cualquie
 
 ![Demo 1](portada.png)
 
-![Demo 2](portada2.png)
-
 ---
 
 ## Características
@@ -41,7 +39,7 @@ pip install requests Pillow
 ## Uso
 
 ```bash
-python3 htb_cover.py <nombre_maquina> --token <tu_api_token>
+python3 cover_generator.py <nombre_maquina> --token <tu_api_token>
 ```
 
 ### Argumentos
@@ -56,13 +54,13 @@ python3 htb_cover.py <nombre_maquina> --token <tu_api_token>
 
 ```bash
 # Uso básico (guarda en principal_cover.png)
-python3 htb_cover.py Principal --token eyJhbGci...
+python3 cover_generator.py Principal --token eyJhbGci...
 
 # Especificar ruta de salida
-python3 htb_cover.py RouterSpace --token eyJhbGci... --output ~/Desktop/portada.png
+python3 cover_generator.py RouterSpace --token eyJhbGci... --output ~/Desktop/portada.png
 
 # Usando el ID numérico de la máquina
-python3 htb_cover.py 622 --token eyJhbGci...
+python3 cover_generator.py 622 --token eyJhbGci...
 ```
 
 ---
@@ -94,9 +92,9 @@ python3 htb_cover.py 622 --token eyJhbGci...
 
 ```
 htb-cover-generator/
-├── htb_cover.py       # Script principal
+├── cover_generator.py       # Script principal
 ├── README.md          # Este fichero
-└── demo_smooth_border.png  # Imagen de ejemplo
+└── portada.png        # Imagen de ejemplo
 ```
 
 ---
