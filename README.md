@@ -2,7 +2,7 @@
 
 Genera una portada visual en formato PNG con la información básica de cualquier máquina de [HackTheBox](https://www.hackthebox.com), lista para usar en writeups, presentaciones o repositorios.
 
-![Demo 1](portada.pngg)
+![Demo 1](portada.png)
 
 ---
 
