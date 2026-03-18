@@ -38,12 +38,12 @@ COLOR_GREY      = (130, 140, 155)
 COLOR_DARK_CARD = (20,  30,  45)
 COLOR_BORDER    = (30,  50,  70)
 
-# Colores de dificultad
+# Colores de dificultad (paleta HackTheBox)
 DIFFICULTY_COLORS = {
-    "Easy":     (0,   200,  80),
-    "Medium":   (255, 165,   0),
-    "Hard":     (220,  50,  50),
-    "Insane":   (180,  40, 220),
+    "Easy":     (0,   204,  68),   # verde HTB
+    "Medium":   (255, 130,   0),   # naranja HTB
+    "Hard":     (210,  35,  35),   # rojo HTB
+    "Insane":   (220, 220, 205),   # gris claro / blanco sucio HTB
 }
 
 # Rutas de fuentes (Poppins disponible en el sistema)
@@ -211,32 +211,65 @@ def circle_avatar(avatar: Image.Image, size: int) -> Image.Image:
     return hi.resize((total, total), Image.LANCZOS)
 
 
+# ─── Iconos de SO (PNGs externos en subcarpeta icons/) ───────────────────────
+
+# Mapeo SO → nombre de fichero dentro de icons/
+_OS_ICON_FILES = {
+    "windows": "windows.png",
+    "linux":   "linux.png",
+    "freebsd": "freebsd.png",
+    "openbsd": "openbsd.png",
+    "mac":     "mac.png",
+    "other":   "other.png",   # opcional; si no existe se usa fallback
+}
+
+# Directorio de iconos relativo al script
+_ICONS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "icons")
+
+
 def os_icon(os_name: str, size: int) -> Image.Image:
-    """Genera un icono simple para el SO."""
-    img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(img)
-    cx, cy, r = size // 2, size // 2, size // 2 - 2
+    """Carga el icono PNG del SO desde la subcarpeta icons/ y lo redimensiona."""
+    os_lower = os_name.lower() if os_name else ""
 
-    os_lower = os_name.lower()
-    if "linux" in os_lower:
-        color = (255, 165, 0)   # naranja
-    elif "windows" in os_lower:
-        color = (0, 120, 215)   # azul Windows
-    elif "freebsd" in os_lower or "openbsd" in os_lower:
-        color = (220, 50, 50)
-    elif "android" in os_lower:
-        color = (60, 180, 75)
+    if "windows" in os_lower:
+        key = "windows"
+    elif "linux" in os_lower:
+        key = "linux"
+    elif "freebsd" in os_lower:
+        key = "freebsd"
+    elif "openbsd" in os_lower:
+        key = "openbsd"
+    elif "mac" in os_lower or "darwin" in os_lower or "osx" in os_lower:
+        key = "mac"
     else:
-        color = (150, 150, 150)
+        key = "other"
 
-    draw.ellipse([2, 2, size-2, size-2], fill=(color[0]//8, color[1]//8, color[2]//8 + 25, 255),
-                 outline=(*color, 255), width=2)
+    icon_path = os.path.join(_ICONS_DIR, _OS_ICON_FILES.get(key, ""))
+
+    # Si el fichero existe, cargarlo y redimensionar manteniendo proporción
+    if os.path.isfile(icon_path):
+        try:
+            img = Image.open(icon_path).convert("RGBA")
+            # Redimensionar preservando relación de aspecto y centrando en lienzo cuadrado
+            img.thumbnail((size, size), Image.LANCZOS)
+            canvas = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+            offset = ((size - img.width) // 2, (size - img.height) // 2)
+            canvas.paste(img, offset, img)
+            return canvas
+        except Exception as e:
+            print(f"⚠️  No se pudo cargar el icono '{icon_path}': {e}")
+
+    # Fallback: círculo gris con inicial del SO
+    fallback = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    d = ImageDraw.Draw(fallback)
+    col = (150, 150, 160, 255)
+    d.ellipse([2, 2, size - 2, size - 2], outline=col, width=2)
     f = font(FONT_BOLD, size // 2)
     letter = os_name[0].upper() if os_name else "?"
-    bbox = draw.textbbox((0, 0), letter, font=f)
+    bbox = d.textbbox((0, 0), letter, font=f)
     tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
-    draw.text((cx - tw // 2, cy - th // 2 - 2), letter, font=f, fill=(*color, 255))
-    return img
+    d.text((size // 2 - tw // 2, size // 2 - th // 2 - 2), letter, font=f, fill=col)
+    return fallback
 
 
 def difficulty_badge(text: str, w=180, h=42) -> Image.Image:
