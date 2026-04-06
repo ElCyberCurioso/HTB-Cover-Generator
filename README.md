@@ -2,7 +2,17 @@
 
 Genera una portada visual en formato PNG con la información básica de cualquier máquina de [HackTheBox](https://www.hackthebox.com), lista para usar en writeups, presentaciones o repositorios.
 
-![Demo 1](portada.png)
+## Ejemplos de resultados
+
+A continuación se muestran algunas portadas generadas para distintas máquinas de HackTheBox:
+
+| Blue | Bastard |
+|:---:|:---:|
+| ![Blue Cover](examples/blue_cover.png) | ![Bastard Cover](examples/bastard_cover.png) |
+
+| Dump | Eloquia |
+|:---:|:---:|
+| ![Dump Cover](examples/dump_cover.png) | ![Eloquia Cover](examples/eloquia_cover.png) |
 
 ---
 
@@ -13,10 +23,11 @@ Genera una portada visual en formato PNG con la información básica de cualquie
 - Muestra nombre, sistema operativo, dificultad, fecha de lanzamiento, puntos y valoración
 - Badge de dificultad con color dinámico acorde a la paleta oficial de HTB (Easy / Medium / Hard / Insane)
 - Icono del sistema operativo cargado desde PNG externo (subcarpeta `icons/`)
-- Borde del avatar con antialiasing mediante supersampling 4x
+- Múltiples elementos (avatares, bordes redondeados) con antialiasing y renderizado avanzado mediante supersampling 4x
 - Paleta de colores oficial de HTB (`#9FEF00`)
 - Imagen de salida en PNG a resolución 1200×675 (16:9)
-- Fuente Poppins con fallback automático a DejaVu Sans
+- Tipografías calculadas geométricamente para un alineamiento central perfecto
+- Integración nativa y descarga de fuente Poppins para su uso constante, sin depender de librerías del Sistema Operativo
 
 ---
 
@@ -29,11 +40,7 @@ Genera una portada visual en formato PNG con la información básica de cualquie
 pip install requests Pillow
 ```
 
-> La fuente **Poppins** debe estar instalada en el sistema. En Debian/Ubuntu:
-> ```bash
-> sudo apt install fonts-google-poppins
-> ```
-> Si no está disponible, el script usa DejaVu Sans automáticamente.
+> La fuente **Poppins** se encarga de descargar e incorporarse de forma automática vía GitHub OFL al primer uso del script, por lo que no hace falta instalar ningún paquete de fuentes manualmente.
 
 ---
 
@@ -126,7 +133,7 @@ Para añadir soporte a un nuevo SO, basta con colocar su PNG en `icons/` y añad
 htb-cover-generator/
 ├── cover_generator.py       # Script principal
 ├── README.md                # Este fichero
-├── portada.png              # Imagen de ejemplo
+├── fonts/                   # (Automático) Fuentes Poppins para uso de la tarjeta
 └── icons/                   # Iconos de sistemas operativos
     ├── windows.png
     ├── linux.png

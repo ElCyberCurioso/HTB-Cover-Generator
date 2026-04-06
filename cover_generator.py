@@ -46,20 +46,34 @@ DIFFICULTY_COLORS = {
     "Insane":   (220, 220, 205),   # gris claro / blanco sucio HTB
 }
 
-# Rutas de fuentes (Poppins disponible en el sistema)
-FONT_DIR   = "/usr/share/fonts/truetype/google-fonts"
+# Rutas de fuentes (descarga automática de la fuente Poppins si no está en local)
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+FONT_DIR   = os.path.join(SCRIPT_DIR, "fonts")
 FONT_BOLD  = os.path.join(FONT_DIR, "Poppins-Bold.ttf")
 FONT_MED   = os.path.join(FONT_DIR, "Poppins-Medium.ttf")
 FONT_REG   = os.path.join(FONT_DIR, "Poppins-Regular.ttf")
 FONT_LIGHT = os.path.join(FONT_DIR, "Poppins-Light.ttf")
 
-# Fallback a DejaVu si no están las Poppins
-if not os.path.exists(FONT_BOLD):
-    FONT_DIR   = "/usr/share/fonts/truetype/dejavu"
-    FONT_BOLD  = os.path.join(FONT_DIR, "DejaVuSans-Bold.ttf")
-    FONT_MED   = FONT_BOLD
-    FONT_REG   = os.path.join(FONT_DIR, "DejaVuSans.ttf")
-    FONT_LIGHT = FONT_REG
+def ensure_fonts():
+    os.makedirs(FONT_DIR, exist_ok=True)
+    base_url = "https://github.com/google/fonts/raw/main/ofl/poppins/"
+    fonts_to_download = {
+        "Poppins-Bold.ttf": FONT_BOLD,
+        "Poppins-Medium.ttf": FONT_MED,
+        "Poppins-Regular.ttf": FONT_REG,
+        "Poppins-Light.ttf": FONT_LIGHT
+    }
+    for font_file, dest_path in fonts_to_download.items():
+        if not os.path.exists(dest_path):
+            print(f"📥 Descargando fuente {font_file}...")
+            try:
+                import urllib.request
+                urllib.request.urlretrieve(base_url + font_file, dest_path)
+            except Exception as e:
+                print(f"⚠️ Error descargando la fuente {font_file}: {e}")
+
+# Aseguramos que existan antes de ejecutar
+ensure_fonts()
 
 
 # ─── Helpers de fuentes ───────────────────────────────────────────────────────
@@ -272,26 +286,41 @@ def os_icon(os_name: str, size: int) -> Image.Image:
     return fallback
 
 
-def difficulty_badge(text: str, w=180, h=42) -> Image.Image:
+def difficulty_badge(text: str, w=200, h=48) -> Image.Image:
     color = DIFFICULTY_COLORS.get(text, (150, 150, 150))
     # Fondo ligeramente más claro que el panel para que el fill sea visible
     r_bg = min(color[0] // 6, 35)
     g_bg = min(color[1] // 6, 45)
     b_bg = min(color[2] // 6 + 30, 60)
-    img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(img)
-    draw.rounded_rectangle([0, 0, w-1, h-1], radius=h//2,
-                            fill=(r_bg, g_bg, b_bg, 255), outline=(*color, 255), width=2)
-    f = font(FONT_BOLD, 18)
-    bbox = draw.textbbox((0, 0), text, font=f)
-    tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
-    draw.text(((w - tw) // 2, (h - th) // 2 - 1), text, font=f, fill=(*color, 255))
-    return img
+    
+    # Usamos supersampling (4x) para evitar bordes pixelados
+    scale = 4
+    sw, sh = w * scale, h * scale
+    
+    img_hi = Image.new("RGBA", (sw, sh), (0, 0, 0, 0))
+    draw_hi = ImageDraw.Draw(img_hi)
+    
+    draw_hi.rounded_rectangle([0, 0, sw-1, sh-1], radius=sh//2,
+                              fill=(r_bg, g_bg, b_bg, 255), outline=(*color, 255), width=2 * scale)
+    
+    # Fuente escalada a 4x
+    f_hi = font(FONT_BOLD, 22 * scale)
+    left, top, right, bottom = draw_hi.textbbox((0, 0), text, font=f_hi)
+    tw, th = right - left, bottom - top
+    
+    # Centrado perfecto considerando los offsets (left, top) de la fuente (textbbox)
+    tx = (sw - tw) // 2 - left
+    ty = (sh - th) // 2 - top
+    
+    draw_hi.text((tx, ty), text, font=f_hi, fill=(*color, 255))
+    
+    # Reducimos tamaño aplicando antialiasing natural (Lanczos)
+    return img_hi.resize((w, h), Image.LANCZOS)
 
 
 def htb_logo_text(draw, x, y):
     """Escribe el logo 'HACK THE BOX' estilizado."""
-    f_htb = font(FONT_BOLD, 13)
+    f_htb = font(FONT_BOLD, 18)
     draw.text((x, y), "HACK THE BOX", font=f_htb, fill=(*COLOR_GREEN, 200))
 
 
@@ -390,7 +419,7 @@ def generate_cover(info: dict, avatar_img: Image.Image | None, output_path: str)
         canvas.paste(placeholder, (ax, ay), placeholder)
 
     # Badge de dificultad bajo el avatar
-    badge = difficulty_badge(difficulty, 170, 38)
+    badge = difficulty_badge(difficulty, 200, 48)
     bx = left_cx - badge.width // 2
     by = ay + total_avatar + 14
     canvas.paste(badge, (bx, by), badge)
@@ -399,7 +428,7 @@ def generate_cover(info: dict, avatar_img: Image.Image | None, output_path: str)
     # ZONA DERECHA: Información de la máquina
     # ─────────────────────────────────────────────────────────────────────────
     info_x = panel_x1 + 470
-    info_y = sep_y + 60
+    info_y = sep_y + 30
 
     # Nombre de la máquina
     f_name_big = font(FONT_BOLD, 72)
@@ -421,20 +450,23 @@ def generate_cover(info: dict, avatar_img: Image.Image | None, output_path: str)
               fill=COLOR_GREEN, width=3)
 
     # ── Datos de la máquina ───────────────────────────────────────────────────
-    row_y = line_y + 40
-    row_gap = 68
+    row_y = line_y + 45
+    row_gap = 85
 
     def data_row(label, value, y, icon_img=None, val_color=COLOR_WHITE):
-        f_label = font(FONT_REG, 15)
-        f_value = font(FONT_BOLD, 26)
+        f_label = font(FONT_REG, 18)
+        f_value = font(FONT_BOLD, 32)
 
         draw.text((info_x, y), label.upper(), font=f_label, fill=COLOR_GREY)
-        val_y = y + 22
+        val_y = y + 28
 
         if icon_img:
-            icon_resized = icon_img.resize((28, 28), Image.LANCZOS)
-            canvas.paste(icon_resized, (info_x, val_y - 2), icon_resized)
-            draw.text((info_x + 36, val_y), value, font=f_value, fill=val_color)
+            icon_resized = icon_img.resize((36, 36), Image.LANCZOS)
+            left, top, right, bottom = draw.textbbox((info_x + 50, val_y), value, font=f_value)
+            icon_y = (top + bottom) // 2 - 18
+            
+            canvas.paste(icon_resized, (info_x, icon_y), icon_resized)
+            draw.text((info_x + 50, val_y), value, font=f_value, fill=val_color)
         else:
             draw.text((info_x, val_y), value, font=f_value, fill=val_color)
 
@@ -451,7 +483,7 @@ def generate_cover(info: dict, avatar_img: Image.Image | None, output_path: str)
 
     # Valoración con estrellas
     star_label_y = row_y + row_gap * 3
-    f_label_sm = font(FONT_REG, 15)
+    f_label_sm = font(FONT_REG, 18)
     draw.text((info_x, star_label_y), "VALORACIÓN", font=f_label_sm, fill=COLOR_GREY)
 
     try:
@@ -459,9 +491,9 @@ def generate_cover(info: dict, avatar_img: Image.Image | None, output_path: str)
     except (ValueError, TypeError):
         stars_float = 0.0
 
-    star_y = star_label_y + 24
-    star_size = 22
-    star_gap  = 28
+    star_y = star_label_y + 28
+    star_size = 26
+    star_gap  = 34
     for i in range(5):
         threshold = stars_float - i
         sx = info_x + i * star_gap
@@ -483,9 +515,15 @@ def generate_cover(info: dict, avatar_img: Image.Image | None, output_path: str)
             pts.append((cx2 + r * math.cos(angle), cy2 + r * math.sin(angle)))
         draw.polygon(pts, fill=star_col)
 
-    f_stars_val = font(FONT_BOLD, 20)
-    draw.text((info_x + 5 * star_gap + 8, star_y + 2),
-              f"{stars_float:.1f}",
+    f_stars_val = font(FONT_BOLD, 26)
+    stars_str = f"{stars_float:.1f}"
+    
+    # Centrar texto con la línea de estrellas
+    left, top, right, bottom = draw.textbbox((0, 0), stars_str, font=f_stars_val)
+    text_y = star_y + (star_size - (bottom - top)) // 2 - top
+    
+    draw.text((info_x + 5 * star_gap + 10, text_y),
+              stars_str,
               font=f_stars_val, fill=(255, 200, 0))
 
     # ── Línea de acento inferior ──────────────────────────────────────────────
@@ -495,8 +533,8 @@ def generate_cover(info: dict, avatar_img: Image.Image | None, output_path: str)
                   fill=(*COLOR_GREEN, alpha), width=1)
 
     # ── Marca de agua / footer ────────────────────────────────────────────────
-    f_foot = font(FONT_LIGHT, 13)
-    draw.text((panel_x2 - 220, panel_y2 - 28),
+    f_foot = font(FONT_LIGHT, 18)
+    draw.text((panel_x2 - 250, panel_y2 - 32),
               "app.hackthebox.com",
               font=f_foot, fill=(*COLOR_GREY, 150))
 
